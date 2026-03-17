@@ -1,487 +1,387 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Agendamento de Visita - Eduardo Schneider</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-            scroll-behavior: smooth;
+<script>
+    // CONFIGURAÇÕES
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7Dme1eQbDXe--GvMP_mTKRcc_8qRg4BPL_m7sekJxzgEAp5EmqqSthEfMsijNgD7p/exec";
+    const ADMIN_PWD = "1234$#@";
+    const HOURS = ["09:30", "11:00", "14:30", "16:00"];
+
+    // ESTADO GLOBAL
+    let bookings = [];
+    let pendingBookings = []; // bloqueios locais imediatos
+    let selectedDate = null;
+    let selectedTime = null;
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+    let activeBooking = null;
+
+    function startup() {
+        let now = new Date();
+        let start = new Date();
+        if (now.getHours() >= 18) start.setDate(start.getDate() + 1);
+        while (start.getDay() === 0 || start.getDay() === 6) start.setDate(start.getDate() + 1);
+
+        selectedDate = toIso(start);
+        renderCalendar();
+        syncData();
+    }
+
+    function startApp() {
+        const lp = document.getElementById('landing-page');
+        const app = document.getElementById('main-app');
+        lp.style.opacity = '0';
+        lp.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+            lp.classList.add('hidden');
+            app.classList.remove('hidden');
+            setTimeout(() => app.classList.add('opacity-100'), 50);
+        }, 500);
+    }
+
+    function moveMonth(dir) {
+        currentMonth += dir;
+        if (currentMonth < 0) {
+            currentMonth = 11;
+            currentYear--;
+        } else if (currentMonth > 11) {
+            currentMonth = 0;
+            currentYear++;
+        }
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById('calendar-grid');
+        const title = document.getElementById('calendar-title');
+        grid.innerHTML = '';
+
+        const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+        title.innerText = `${monthNames[currentMonth]} ${currentYear}`;
+
+        const startDay = new Date(currentYear, currentMonth, 1).getDay();
+        const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const now = new Date();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        for (let i = 0; i < startDay; i++) {
+            grid.appendChild(document.createElement('div'));
         }
 
-        /* Animações Customizadas */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        for (let d = 1; d <= totalDays; d++) {
+            const dayObj = new Date(currentYear, currentMonth, d);
+            dayObj.setHours(0, 0, 0, 0);
 
-        @keyframes fadeInScale {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
+            const iso = toIso(dayObj);
+            const isPast = dayObj < today;
+            const isWeekend = dayObj.getDay() === 0 || dayObj.getDay() === 6;
+            const isLateToday = iso === toIso(now) && now.getHours() >= 18;
+            const disabled = isPast || isWeekend || isLateToday;
 
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
+            const cell = document.createElement('div');
+            cell.className = `calendar-day ${disabled ? 'disabled' : ''} ${iso === selectedDate ? 'selected' : 'hover:bg-blue-50 text-gray-700'}`;
+            cell.innerText = d;
 
-        .animate-fade { animation: fadeIn 0.4s ease-out forwards; }
-        .animate-pop { animation: fadeInScale 0.3s ease-out forwards; }
-        
-        .calendar-day { 
-            aspect-ratio: 1; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            border-radius: 14px; 
-            cursor: pointer; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            font-weight: 600; 
-        }
-
-        .calendar-day.selected { 
-            background: #2b7de0; 
-            color: white; 
-            box-shadow: 0 10px 15px -3px rgba(43, 125, 224, 0.4); 
-            transform: scale(1.05);
-        }
-
-        .calendar-day.disabled { 
-            color: #d1d5db; 
-            cursor: not-allowed; 
-            opacity: 0.4; 
-        }
-
-        .calendar-day:not(.disabled):not(.selected):hover { 
-            background: #f0f7ff; 
-            color: #2b7de0; 
-            transform: translateY(-2px);
-        }
-
-        .btn-interact {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .btn-interact:active {
-            transform: scale(0.96);
-        }
-
-        .loader { 
-            border: 3px solid #f3f3f3; 
-            border-top: 3px solid #f57c24; 
-            border-radius: 50%; 
-            width: 20px; 
-            height: 20px; 
-            animation: spin 1s linear infinite; 
-            display: inline-block; 
-        }
-
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .modal-active { overflow: hidden; }
-        
-        /* Backdrop blur suave */
-        .glass-modal {
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-        }
-
-        input { font-size: 16px !important; } 
-    </style>
-</head>
-<body class="bg-gray-50 text-gray-800">
-
-    <!-- TELA DE ENTRADA -->
-    <div id="screen-landing" class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 transition-all duration-700">
-        <div class="absolute top-0 w-full h-64 bg-gradient-to-b from-blue-50 to-transparent"></div>
-        
-        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl shadow-blue-100 w-full max-w-sm text-center relative z-10 border-t-4 border-[#f57c24] animate-fade">
-            <div class="mb-8">
-                <div class="text-5xl font-extrabold tracking-tighter text-[#2b7de0]">tbo<span class="text-[#f57c24]">.com</span></div>
-                <div class="text-[0.6rem] font-bold text-gray-400 tracking-widest uppercase mt-1">Travel Simplified</div>
-            </div>
-            <h1 class="text-3xl font-extrabold mb-1">Eduardo Schneider</h1>
-            <p class="text-sm font-semibold text-[#2b7de0] bg-blue-50 inline-block px-4 py-1 rounded-full mb-10">Executivo de Contas</p>
-            <h2 class="text-xl font-bold text-gray-700 mb-2">Agende sua visita</h2>
-            <p class="text-sm text-gray-500 mb-10 leading-relaxed">Escolha o melhor dia e horário para receber Eduardo na sua agência.</p>
-            
-            <button onclick="showApp()" class="w-full bg-[#f57c24] hover:bg-[#d9671b] text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-200 flex items-center justify-center gap-3 btn-interact text-lg">
-                Agendar Agora <i class="fas fa-arrow-right"></i>
-            </button>
-        </div>
-
-        <div class="mt-12 text-center animate-fade" style="animation-delay: 0.2s">
-            <a href="https://www.instagram.com/edu.schneider.br" target="_blank" class="text-gray-300 hover:text-[#f57c24] text-2xl transition-all hover:scale-110 inline-block"><i class="fab fa-instagram"></i></a>
-            <p class="text-[0.65rem] text-gray-400 mt-4 font-bold uppercase tracking-tighter">Powered by @InsideProjectCO</p>
-        </div>
-    </div>
-
-    <!-- APP PRINCIPAL -->
-    <div id="screen-app" class="hidden opacity-0 transition-all duration-700 transform translate-y-4 max-w-lg mx-auto pb-12">
-        <header class="bg-[#2b7de0] text-white p-8 rounded-b-[3.5rem] shadow-xl relative overflow-hidden">
-            <div class="absolute -top-10 -right-10 w-48 h-48 bg-[#f57c24] rounded-full opacity-20 transition-transform duration-1000 hover:scale-110"></div>
-            <div class="relative z-10">
-                <div class="text-2xl font-extrabold tracking-tighter mb-4 opacity-80">tbo<span class="text-[#f57c24]">.com</span></div>
-                <h2 class="text-3xl font-bold">Olá!</h2>
-                <p class="text-blue-100 text-sm mt-1 opacity-90">Selecione uma data no calendário abaixo.</p>
-            </div>
-        </header>
-
-        <main class="px-6 mt-8">
-            <!-- CALENDÁRIO -->
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-6 animate-pop">
-                <div class="flex justify-between items-center mb-6">
-                    <button onclick="navMonth(-1)" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-50 hover:text-[#2b7de0] btn-interact"><i class="fas fa-chevron-left"></i></button>
-                    <h3 id="cal-title" class="font-bold text-gray-700 capitalize text-lg"></h3>
-                    <button onclick="navMonth(1)" class="w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-50 hover:text-[#2b7de0] btn-interact"><i class="fas fa-chevron-right"></i></button>
-                </div>
-                <div class="grid grid-cols-7 gap-1 text-center mb-4 text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest">
-                    <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
-                </div>
-                <div id="cal-grid" class="grid grid-cols-7 gap-1"></div>
-            </div>
-
-            <!-- HORÁRIOS -->
-            <div class="mt-10">
-                <div class="flex justify-between items-center mb-5 px-1">
-                    <h3 class="font-bold text-gray-700 text-lg">Horários Disponíveis</h3>
-                    <button onclick="loadData()" class="text-[#2b7de0] text-xs font-bold uppercase tracking-wider flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-full btn-interact">
-                        <i id="sync-icon" class="fas fa-sync-alt"></i> Atualizar
-                    </button>
-                </div>
-                <div id="time-grid" class="grid grid-cols-2 gap-4"></div>
-            </div>
-        </main>
-    </div>
-
-    <!-- MODAL AGENDAMENTO -->
-    <div id="modal-form" class="fixed inset-0 z-[60] bg-black/60 hidden items-center justify-center p-4 glass-modal transition-opacity duration-300">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl transform transition-all duration-300 translate-y-8 opacity-0" id="modal-form-content">
-            <div class="bg-[#2b7de0] p-6 text-white flex justify-between items-center">
-                <div>
-                    <h3 class="font-bold text-xl">Quase lá!</h3>
-                    <p class="text-xs opacity-80">Confirme os dados da sua agência</p>
-                </div>
-                <button onclick="closeModals()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 btn-interact"><i class="fas fa-times text-xl"></i></button>
-            </div>
-            <div class="p-8">
-                <div class="bg-blue-50 p-4 rounded-2xl mb-6 border border-blue-100 text-sm font-semibold text-[#2b7de0] flex items-center gap-3">
-                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                        <i class="far fa-calendar-check text-lg text-[#f57c24]"></i>
-                    </div>
-                    <span id="info-reserva"></span>
-                </div>
-                <form id="booking-form" class="space-y-4">
-                    <input type="text" id="f-empresa" placeholder="Nome da Agência" required class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#2b7de0] transition-all">
-                    <input type="text" id="f-nome" placeholder="Seu Nome" required class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#2b7de0] transition-all">
-                    <input type="email" id="f-email" placeholder="Seu E-mail" required class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#2b7de0] transition-all">
-                    <input type="text" id="f-assunto" placeholder="Assunto (ex: Treinamento)" required class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#2b7de0] transition-all">
-                    <button type="submit" id="btn-envio" class="w-full bg-[#f57c24] text-white font-bold py-5 rounded-2xl shadow-lg shadow-orange-100 btn-interact mt-2">Finalizar Reserva</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL SENHA -->
-    <div id="modal-pass" class="fixed inset-0 z-[70] bg-black/60 hidden items-center justify-center p-4 glass-modal transition-opacity duration-300">
-        <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 text-center shadow-2xl transform transition-all duration-300 scale-90 opacity-0" id="modal-pass-content">
-            <div class="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-inner"><i class="fas fa-lock"></i></div>
-            <h3 class="font-bold text-2xl mb-2 text-gray-800">Área Restrita</h3>
-            <p class="text-sm text-gray-500 mb-8 leading-relaxed">Apenas o Eduardo pode visualizar os detalhes desta reserva.</p>
-            <input type="password" id="admin-pass" placeholder="Senha de Acesso" class="w-full p-4 bg-gray-50 rounded-2xl text-center mb-8 outline-none focus:ring-2 focus:ring-red-500 font-mono tracking-widest text-lg">
-            <div class="flex gap-3">
-                <button onclick="closeModals()" class="flex-1 py-4 font-bold text-gray-400 btn-interact">Voltar</button>
-                <button onclick="checkAdmin()" class="flex-1 py-4 bg-red-500 text-white rounded-2xl font-bold shadow-lg shadow-red-100 btn-interact">Entrar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DETALHES -->
-    <div id="modal-details" class="fixed inset-0 z-[80] bg-black/60 hidden items-center justify-center p-4 glass-modal">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl animate-pop">
-            <div class="bg-gray-900 p-6 text-white flex justify-between items-center">
-                <h3 class="font-bold flex items-center gap-2"><i class="fas fa-info-circle text-[#f57c24]"></i> Detalhes da Visita</h3>
-                <button onclick="closeModals()" class="btn-interact opacity-50 hover:opacity-100"><i class="fas fa-times text-xl"></i></button>
-            </div>
-            <div id="details-content" class="p-8 space-y-4"></div>
-        </div>
-    </div>
-
-    <!-- FEEDBACK (SUCCESS/ERROR) -->
-    <div id="modal-msg" class="fixed inset-0 z-[100] bg-black/60 hidden items-center justify-center p-6 glass-modal">
-        <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-10 text-center shadow-2xl animate-pop">
-            <div id="msg-icon" class="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"></div>
-            <h3 id="msg-title" class="text-2xl font-bold mb-2"></h3>
-            <p id="msg-text" class="text-gray-500 mb-10"></p>
-            <button onclick="closeModals()" class="w-full py-5 bg-[#2b7de0] text-white rounded-2xl font-bold shadow-lg shadow-blue-100 btn-interact">Entendido</button>
-        </div>
-    </div>
-
-    <script>
-        // --- CONFIG ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7Dme1eQbDXe--GvMP_mTKRcc_8qRg4BPL_m7sekJxzgEAp5EmqqSthEfMsijNgD7p/exec";
-        const PASSWORD = "1234$#@";
-        const TIMES = ["09:30", "11:00", "14:30", "16:00"];
-
-        // --- STATE ---
-        let bookings = [];
-        let selectedDate = null;
-        let selectedTime = null;
-        let currentMonth = new Date().getMonth();
-        let currentYear = new Date().getFullYear();
-        let activeBooking = null;
-
-        // --- INIT ---
-        function init() {
-            let now = new Date();
-            let d = new Date();
-            
-            if(now.getHours() >= 18) d.setDate(d.getDate() + 1);
-            while(d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
-            
-            selectedDate = dateToISO(d);
-            renderCal();
-            loadData();
-        }
-
-        function showApp() {
-            const landing = document.getElementById('screen-landing');
-            const app = document.getElementById('screen-app');
-            
-            landing.style.opacity = '0';
-            landing.style.transform = 'scale(1.1)';
-            
-            setTimeout(() => {
-                landing.classList.add('hidden');
-                app.classList.remove('hidden');
-                requestAnimationFrame(() => {
-                    app.classList.add('opacity-100');
-                    app.style.transform = 'translateY(0)';
-                });
-            }, 600);
-        }
-
-        // --- CALENDAR ---
-        function navMonth(step) {
-            const grid = document.getElementById('cal-grid');
-            grid.style.opacity = '0';
-            grid.style.transform = 'scale(0.98)';
-            
-            setTimeout(() => {
-                currentMonth += step;
-                if(currentMonth < 0) { currentMonth = 11; currentYear--; }
-                else if(currentMonth > 11) { currentMonth = 0; currentYear++; }
-                renderCal();
-                grid.style.opacity = '1';
-                grid.style.transform = 'scale(1)';
-            }, 200);
-        }
-
-        function renderCal() {
-            const grid = document.getElementById('cal-grid');
-            grid.innerHTML = '';
-            const names = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-            document.getElementById('cal-title').innerText = `${names[currentMonth]} ${currentYear}`;
-
-            const start = new Date(currentYear, currentMonth, 1).getDay();
-            const days = new Date(currentYear, currentMonth + 1, 0).getDate();
-            
-            const now = new Date();
-            const today = new Date(); today.setHours(0,0,0,0);
-            const currentHour = now.getHours();
-
-            for(let i=0; i<start; i++) grid.appendChild(document.createElement('div'));
-
-            for(let d=1; d<=days; d++) {
-                const dateObj = new Date(currentYear, currentMonth, d);
-                const iso = dateToISO(dateObj);
-                const isToday = iso === dateToISO(now);
-                const isPast = dateObj < today;
-                const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
-                const isTooLateToday = isToday && currentHour >= 18;
-                const isDisabled = isPast || isWeekend || isTooLateToday;
-
-                const cell = document.createElement('div');
-                cell.className = `calendar-day ${isDisabled ? 'disabled' : ''} ${iso === selectedDate ? 'selected' : ''}`;
-                cell.innerText = d;
-                
-                if(!isDisabled) {
-                    cell.onclick = () => { 
-                        selectedDate = iso; 
-                        renderCal(); 
-                        renderSlots(true); 
-                    };
-                }
-                grid.appendChild(cell);
+            if (!disabled) {
+                cell.onclick = () => {
+                    selectedDate = iso;
+                    renderCalendar();
+                    renderSlots(true);
+                };
             }
-            renderSlots(false);
+
+            grid.appendChild(cell);
         }
 
-        function renderSlots(animate = false) {
-            const grid = document.getElementById('time-grid');
-            if(animate) {
-                grid.style.opacity = '0';
-                grid.style.transform = 'translateY(10px)';
-            }
-            
-            setTimeout(() => {
-                grid.innerHTML = '';
-                TIMES.forEach((t, index) => {
-                    const b = bookings.find(x => x.date === selectedDate && x.time === t);
-                    const btn = document.createElement('button');
-                    btn.className = `w-full py-5 rounded-[1.8rem] font-bold flex flex-col items-center justify-center gap-1 border-2 transition-all btn-interact`;
-                    btn.style.animation = `fadeIn 0.4s ease-out ${index * 0.05}s forwards`;
-                    btn.style.opacity = '0';
-                    
-                    if(b) {
-                        btn.classList.add('bg-red-50', 'text-red-500', 'border-red-100');
-                        btn.innerHTML = `<i class="fas fa-lock text-xs opacity-40"></i><span>${t}</span><span class="text-[0.55rem] uppercase opacity-60 tracking-widest font-extrabold">Reservado</span>`;
-                        btn.onclick = () => { activeBooking = b; openModal('modal-pass'); };
-                    } else {
-                        btn.classList.add('bg-white', 'text-[#2b7de0]', 'border-blue-50', 'hover:border-blue-200', 'hover:bg-blue-50/20', 'shadow-sm');
-                        btn.innerHTML = `<i class="far fa-clock text-xs text-[#f57c24]"></i><span>${t}</span><span class="text-[0.55rem] uppercase tracking-widest text-[#f57c24] font-extrabold">Livre</span>`;
-                        btn.onclick = () => { selectedTime = t; openBooking(); };
+        renderSlots(false);
+    }
+
+    function normalizeDate(value) {
+        if (!value) return '';
+
+        let v = String(value).trim();
+
+        // formato ISO com horário: 2026-03-17T00:00:00.000Z
+        if (v.includes('T')) {
+            return v.split('T')[0];
+        }
+
+        // formato BR: 17/03/2026
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
+            const [dd, mm, yyyy] = v.split('/');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // formato ISO simples: 2026-03-17
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+            return v;
+        }
+
+        // tentativa final via Date
+        const parsed = new Date(v);
+        if (!isNaN(parsed.getTime())) {
+            return toIso(parsed);
+        }
+
+        return v;
+    }
+
+    function normalizeTime(value) {
+        if (!value) return '';
+        return String(value).trim().slice(0, 5);
+    }
+
+    function isSlotBooked(date, time) {
+        const normalizedDate = normalizeDate(date);
+        const normalizedTime = normalizeTime(time);
+
+        const allBookings = [...bookings, ...pendingBookings];
+
+        return allBookings.some(b => {
+            return normalizeDate(b.date) === normalizedDate &&
+                   normalizeTime(b.time) === normalizedTime;
+        });
+    }
+
+    function renderSlots(animate) {
+        const grid = document.getElementById('time-grid');
+        grid.innerHTML = '';
+
+        HOURS.forEach((h, i) => {
+            const match =
+                [...bookings, ...pendingBookings].find(b =>
+                    normalizeDate(b.date) === selectedDate &&
+                    normalizeTime(b.time) === h
+                );
+
+            const btn = document.createElement('button');
+            btn.className = `w-full py-5 rounded-[1.8rem] font-bold flex flex-col items-center justify-center gap-1 border-2 transition-all btn-interact ${animate ? 'animate-slot' : ''}`;
+            btn.style.animationDelay = `${i * 0.05}s`;
+
+            if (match) {
+                btn.classList.add('bg-red-50', 'text-red-500', 'border-red-100');
+                btn.innerHTML = `<i class="fas fa-lock text-xs opacity-40"></i><span>${h}</span><span class="text-[0.55rem] uppercase opacity-60 tracking-widest font-extrabold">Reservado</span>`;
+                btn.onclick = () => {
+                    activeBooking = match;
+                    openModal('modal-password');
+                };
+            } else {
+                btn.classList.add('bg-white', 'text-[#2b7de0]', 'border-blue-50', 'hover:border-blue-200', 'hover:bg-blue-50/20', 'shadow-sm');
+                btn.innerHTML = `<i class="far fa-clock text-xs text-[#f57c24]"></i><span>${h}</span><span class="text-[0.55rem] uppercase tracking-widest text-[#f57c24] font-extrabold">Livre</span>`;
+                btn.onclick = () => {
+                    if (isSlotBooked(selectedDate, h)) {
+                        showFeedback("Horário indisponível", "Esse horário acabou de ser reservado. Escolha outro.", "bg-red-50 text-red-600", "fa-lock");
+                        renderSlots(true);
+                        return;
                     }
-                    grid.appendChild(btn);
-                });
-                if(animate) {
-                    grid.style.opacity = '1';
-                    grid.style.transform = 'translateY(0)';
-                }
-            }, animate ? 150 : 0);
-        }
 
-        // --- ACTIONS ---
-        async function loadData() {
-            const sync = document.getElementById('sync-icon');
-            sync.classList.add('fa-spin');
-            try {
-                const res = await fetch(`${SCRIPT_URL}?action=get&cb=${Date.now()}`);
-                const data = await res.json();
-                if(Array.isArray(data)) { 
-                    bookings = data; 
-                    renderSlots(true); 
-                }
-            } catch(e) { console.error("Sync error"); }
-            finally { 
-                setTimeout(() => sync.classList.remove('fa-spin'), 600);
+                    selectedTime = h;
+                    openBooking();
+                };
+            }
+
+            grid.appendChild(btn);
+        });
+    }
+
+    async function syncData() {
+        const icon = document.getElementById('sync-icon');
+        if (icon) icon.classList.add('sync-spin');
+
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=get&t=${Date.now()}`, {
+                method: 'GET',
+                cache: 'no-store'
+            });
+
+            const data = await res.json();
+
+            if (Array.isArray(data)) {
+                bookings = data.map(item => ({
+                    ...item,
+                    date: normalizeDate(item.date),
+                    time: normalizeTime(item.time)
+                }));
+
+                // remove pendências que já chegaram da planilha
+                pendingBookings = pendingBookings.filter(p =>
+                    !bookings.some(b =>
+                        normalizeDate(b.date) === normalizeDate(p.date) &&
+                        normalizeTime(b.time) === normalizeTime(p.time)
+                    )
+                );
+
+                renderSlots(true);
+            }
+        } catch (e) {
+            console.error("Sync Error:", e);
+        } finally {
+            if (icon) {
+                setTimeout(() => icon.classList.remove('sync-spin'), 600);
             }
         }
+    }
 
-        function openBooking() {
-            document.getElementById('info-reserva').innerText = `${selectedDate.split('-').reverse().join('/')} às ${selectedTime}`;
-            openModal('modal-form');
+    function openBooking() {
+        document.getElementById('info-data').innerText =
+            `${selectedDate.split('-').reverse().join('/')} às ${selectedTime}`;
+        openModal('modal-booking');
+    }
+
+    document.getElementById('form-booking').onsubmit = async (e) => {
+        e.preventDefault();
+
+        if (isSlotBooked(selectedDate, selectedTime)) {
+            closeModals();
+            showFeedback("Horário indisponível", "Esse horário já foi reservado. Escolha outro.", "bg-red-50 text-red-600", "fa-lock");
+            renderSlots(true);
+            return;
         }
 
-        document.getElementById('booking-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-envio');
-            const original = btn.innerText;
-            btn.disabled = true; btn.innerHTML = '<span class="loader"></span> Aguardando...';
+        const btn = document.getElementById('btn-finalizar');
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch sync-spin mr-2"></i> Agendando...';
 
-            const p = new URLSearchParams();
-            p.append('date', selectedDate); p.append('time', selectedTime);
-            p.append('empresa', document.getElementById('f-empresa').value);
-            p.append('nome', document.getElementById('f-nome').value);
-            p.append('email', document.getElementById('f-email').value);
-            p.append('assunto', document.getElementById('f-assunto').value);
-
-            try {
-                fetch(SCRIPT_URL, { method: 'POST', body: p, mode: 'no-cors' });
-                closeModals();
-                document.getElementById('booking-form').reset();
-                showMsg("Feito!", "Sua visita foi agendada. Eduardo Schneider entrará em contato em breve.", "bg-green-50 text-green-500", "fa-check-circle");
-                setTimeout(loadData, 4000);
-            } catch(err) {
-                showMsg("Erro", "Falha na conexão. Tente novamente.", "bg-red-50 text-red-600", "fa-exclamation-triangle");
-            } finally {
-                btn.disabled = false; btn.innerText = original;
-            }
+        const novaReserva = {
+            date: selectedDate,
+            time: selectedTime,
+            empresa: document.getElementById('agencia').value.trim(),
+            nome: document.getElementById('responsavel').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            assunto: document.getElementById('assunto').value.trim()
         };
 
-        function checkAdmin() {
-            if(document.getElementById('admin-pass').value === PASSWORD) {
-                closeModals();
-                const b = activeBooking;
-                document.getElementById('details-content').innerHTML = `
-                    <div class="bg-gray-50 p-5 rounded-3xl animate-fade">
-                        <label class="text-[0.65rem] font-extrabold text-gray-400 uppercase tracking-widest mb-1 block">Empresa</label>
-                        <p class="font-bold text-xl text-gray-800">${b.empresa}</p>
-                    </div>
-                    <div class="bg-gray-50 p-5 rounded-3xl animate-fade" style="animation-delay: 0.1s">
-                        <label class="text-[0.65rem] font-extrabold text-gray-400 uppercase tracking-widest mb-1 block">Contato</label>
-                        <p class="font-bold text-gray-800 text-lg">${b.nome}</p>
-                    </div>
-                    <div class="bg-gray-50 p-5 rounded-3xl animate-fade" style="animation-delay: 0.2s">
-                        <label class="text-[0.65rem] font-extrabold text-gray-400 uppercase tracking-widest mb-1 block">E-mail</label>
-                        <p class="text-blue-600 font-bold break-all">${b.email}</p>
-                    </div>
-                    <div class="bg-gray-50 p-5 rounded-3xl animate-fade" style="animation-delay: 0.3s">
-                        <label class="text-[0.65rem] font-extrabold text-gray-400 uppercase tracking-widest mb-1 block">Assunto</label>
-                        <p class="text-gray-700 font-medium">${b.assunto}</p>
-                    </div>
-                `;
-                openModal('modal-details');
-            } else {
-                showMsg("Erro", "Senha incorreta.", "bg-red-50 text-red-500", "fa-lock");
-            }
-        }
+        // BLOQUEIA IMEDIATAMENTE NO FRONT
+        pendingBookings.push(novaReserva);
+        renderSlots(true);
 
-        // --- HELPERS ---
-        function openModal(id) { 
-            const el = document.getElementById(id);
-            const content = document.getElementById(id + '-content');
-            el.classList.remove('hidden'); 
-            el.classList.add('flex'); 
-            document.body.classList.add('modal-active'); 
-            
-            requestAnimationFrame(() => {
-                el.style.opacity = '1';
-                if(content) {
-                    content.style.opacity = '1';
-                    content.style.transform = 'translateY(0) scale(1)';
-                }
+        const p = new URLSearchParams();
+        p.append('date', novaReserva.date);
+        p.append('time', novaReserva.time);
+        p.append('empresa', novaReserva.empresa);
+        p.append('nome', novaReserva.nome);
+        p.append('email', novaReserva.email);
+        p.append('assunto', novaReserva.assunto);
+
+        try {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: p,
+                mode: 'no-cors'
             });
+
+            closeModals();
+            document.getElementById('form-booking').reset();
+
+            showFeedback(
+                "Sucesso!",
+                "Sua visita foi agendada. O horário já foi bloqueado.",
+                "bg-green-50 text-green-600",
+                "fa-check-circle"
+            );
+
+            // sincroniza algumas vezes para confirmar persistência
+            setTimeout(syncData, 1500);
+            setTimeout(syncData, 4000);
+            setTimeout(syncData, 7000);
+
+        } catch (err) {
+            // remove bloqueio local se der erro real de rede
+            pendingBookings = pendingBookings.filter(b =>
+                !(normalizeDate(b.date) === normalizeDate(novaReserva.date) &&
+                  normalizeTime(b.time) === normalizeTime(novaReserva.time))
+            );
+
+            renderSlots(true);
+
+            showFeedback(
+                "Erro",
+                "Falha na conexão. Tente novamente.",
+                "bg-red-50 text-red-600",
+                "fa-exclamation-triangle"
+            );
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    };
+
+    function checkAdmin() {
+        const passInput = document.getElementById('admin-pass');
+
+        if (passInput.value === ADMIN_PWD) {
+            const b = activeBooking;
+            if (!b) return;
+
+            closeModals();
+            document.getElementById('details-content').innerHTML = `
+                <div class="bg-gray-50 p-5 rounded-3xl animate-slot">
+                    <label class="text-[0.65rem] font-bold text-gray-400 uppercase block mb-1">Agência</label>
+                    <p class="font-bold text-xl text-gray-800">${escapeHtml(b.empresa || 'N/A')}</p>
+                </div>
+                <div class="bg-gray-50 p-5 rounded-3xl animate-slot" style="animation-delay:0.1s">
+                    <label class="text-[0.65rem] font-bold text-gray-400 uppercase block mb-1">Contato</label>
+                    <p class="font-bold text-gray-800 text-lg">${escapeHtml(b.nome || 'N/A')}</p>
+                </div>
+                <div class="bg-gray-50 p-5 rounded-3xl animate-slot" style="animation-delay:0.2s">
+                    <label class="text-[0.65rem] font-bold text-gray-400 uppercase block mb-1">E-mail</label>
+                    <p class="text-blue-600 font-bold break-all underline">${escapeHtml(b.email || 'N/A')}</p>
+                </div>
+                <div class="bg-gray-50 p-5 rounded-3xl animate-slot" style="animation-delay:0.3s">
+                    <label class="text-[0.65rem] font-bold text-gray-400 uppercase block mb-1">Assunto</label>
+                    <p class="text-gray-700 font-medium">${escapeHtml(b.assunto || 'N/A')}</p>
+                </div>
+            `;
+            openModal('modal-details');
+        } else {
+            showFeedback("Acesso Negado", "Senha incorreta.", "bg-red-50 text-red-500", "fa-lock");
         }
 
-        function closeModals() { 
-            document.querySelectorAll('[id^="modal-"]').forEach(m => { 
-                const content = document.getElementById(m.id + '-content');
-                m.style.opacity = '0';
-                if(content) {
-                    content.style.opacity = '0';
-                    content.style.transform = 'translateY(20px) scale(0.95)';
-                }
-                setTimeout(() => {
-                    m.classList.add('hidden'); 
-                    m.classList.remove('flex'); 
-                }, 300);
-            }); 
-            document.body.classList.remove('modal-active');
-        }
+        passInput.value = '';
+    }
 
-        function showMsg(t, s, c, i) {
-            document.getElementById('msg-title').innerText = t;
-            document.getElementById('msg-text').innerText = s;
-            const box = document.getElementById('msg-icon');
-            box.className = `w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 ${c}`;
-            box.innerHTML = `<i class="fas ${i} text-5xl"></i>`;
-            openModal('modal-msg');
-        }
+    function openModal(id) {
+        const m = document.getElementById(id);
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => m.style.opacity = '1', 10);
+    }
 
-        function dateToISO(d) { 
-            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; 
-        }
+    function closeModals() {
+        document.querySelectorAll('[id^="modal-"]').forEach(m => {
+            m.style.opacity = '0';
+            setTimeout(() => {
+                m.classList.add('hidden');
+                m.classList.remove('flex');
+            }, 300);
+        });
 
-        init();
-    </script>
-</body>
-</html>
+        document.body.style.overflow = 'auto';
+        activeBooking = null;
+    }
+
+    function showFeedback(t, s, c, i) {
+        document.getElementById('msg-title').innerText = t;
+        document.getElementById('msg-text').innerText = s;
+        const box = document.getElementById('msg-icon');
+        box.className = `w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${c}`;
+        box.innerHTML = `<i class="fas ${i} text-4xl"></i>`;
+        openModal('modal-msg');
+    }
+
+    function toIso(d) {
+        const local = new Date(d);
+        return `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`;
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    window.onload = startup;
+</script>
