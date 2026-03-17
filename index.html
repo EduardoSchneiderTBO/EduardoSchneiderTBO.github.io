@@ -7,30 +7,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs (Apenas para o preview local caso falhe a planilha) -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
 
     <style>
-        /* Ocultar barra de rolagem horizontal, mas manter a funcionalidade de deslizar */
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .date-card.active {
-            background-color: #2b7de0; /* Azul TBO */
-            color: white;
-            border-color: #2b7de0;
-        }
-        
-        /* Animação suave para a transição de páginas */
-        .page-transition {
-            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
-        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .page-transition { transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out; }
     </style>
 </head>
 <body class="bg-gray-50 font-sans antialiased text-gray-800 overflow-hidden" id="body-container">
@@ -39,15 +24,11 @@
     <!-- PÁGINA DE ENTRADA (LANDING PAGE)           -->
     <!-- ========================================== -->
     <div id="landing-page" class="fixed inset-0 bg-gray-50 z-50 flex flex-col items-center justify-center p-6 page-transition">
-        <!-- Elementos decorativos de fundo -->
         <div class="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-[#2b7de0]/10 to-transparent"></div>
         <div class="absolute bottom-[-10%] right-[-10%] w-80 h-80 bg-[#f57c24]/10 rounded-full blur-3xl -z-10"></div>
         <div class="absolute top-[10%] left-[-10%] w-64 h-64 bg-[#2b7de0]/10 rounded-full blur-3xl -z-10"></div>
 
-        <!-- Card Principal -->
         <div class="bg-white p-10 rounded-[2rem] shadow-2xl shadow-[#2b7de0]/10 w-full max-w-sm text-center relative z-10 border-t-4 border-[#f57c24]">
-            
-            <!-- Logo tbo.com recriada com as cores -->
             <div class="mb-8">
                 <div class="text-5xl font-extrabold tracking-tighter mb-1">
                     <span class="text-[#2b7de0]">tbo</span><span class="text-[#f57c24]">.com</span>
@@ -55,7 +36,6 @@
                 <div class="text-[0.65rem] font-bold text-[#999999] tracking-[0.2em] uppercase">Travel Simplified</div>
             </div>
 
-            <!-- Título / Nome -->
             <h1 class="text-3xl font-extrabold text-gray-800 mb-1">Eduardo Schneider</h1>
             <p class="text-sm font-semibold text-[#2b7de0] mb-10 bg-[#2b7de0]/10 inline-block px-4 py-1 rounded-full">Executivo de Contas</p>
 
@@ -64,7 +44,6 @@
                 <p class="text-sm text-gray-500 mt-3 leading-relaxed">Escolha o melhor dia e horário para eu ir até a sua agência apresentar nossas soluções.</p>
             </div>
 
-            <!-- Botão de Ação Laranja TBO -->
             <button onclick="startApp()" class="w-full bg-[#f57c24] hover:bg-[#d9671b] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#f57c24]/30 transition-all flex items-center justify-center gap-3 group text-lg">
                 <span>Agendar Agora</span>
                 <i class="fas fa-arrow-right transform group-hover:translate-x-1 transition-transform"></i>
@@ -84,15 +63,11 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- APLICATIVO PRINCIPAL (OCULTO INICIALMENTE) -->
+    <!-- APLICATIVO PRINCIPAL                       -->
     <!-- ========================================== -->
     <div id="main-app" class="hidden opacity-0 page-transition h-screen overflow-y-auto pb-10">
-        
-        <!-- Header Principal com cores da marca -->
         <header class="bg-[#2b7de0] text-white p-6 rounded-b-[2rem] shadow-lg max-w-lg mx-auto relative overflow-hidden">
-            <!-- Detalhe decorativo laranja -->
             <div class="absolute top-0 right-0 w-24 h-24 bg-[#f57c24] rounded-bl-full opacity-90"></div>
-            
             <div class="relative z-10">
                 <div class="text-2xl font-extrabold tracking-tighter mb-4 opacity-90">
                     <span class="text-white">tbo</span><span class="text-[#f57c24]">.com</span>
@@ -106,9 +81,7 @@
             <!-- Calendário Completo -->
             <div class="mt-8 px-6">
                 <h2 class="text-lg font-bold text-gray-700 mb-3">Escolha a Data</h2>
-                
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                    <!-- Cabeçalho do Calendário -->
                     <div class="flex justify-between items-center mb-5">
                         <button onclick="changeMonth(-1)" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 transition-colors">
                             <i class="fas fa-chevron-left text-sm"></i>
@@ -119,7 +92,6 @@
                         </button>
                     </div>
                     
-                    <!-- Dias da Semana -->
                     <div class="grid grid-cols-7 gap-1 text-center mb-3">
                         <div class="text-[0.65rem] font-bold text-gray-400 uppercase">Dom</div>
                         <div class="text-[0.65rem] font-bold text-gray-400 uppercase">Seg</div>
@@ -129,20 +101,14 @@
                         <div class="text-[0.65rem] font-bold text-gray-400 uppercase">Sex</div>
                         <div class="text-[0.65rem] font-bold text-gray-400 uppercase">Sáb</div>
                     </div>
-                    
-                    <!-- Grelha de Dias -->
-                    <div id="calendar-grid" class="grid grid-cols-7 gap-y-2 gap-x-1 text-center">
-                        <!-- Dias serão gerados via JS -->
-                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-y-2 gap-x-1 text-center"></div>
                 </div>
             </div>
 
             <!-- Time Slots -->
             <div class="mt-6 px-6">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Horários Disponíveis</h2>
-                <div id="time-slots" class="grid grid-cols-2 gap-3">
-                    <!-- Horários serão gerados via JS -->
-                </div>
+                <div id="time-slots" class="grid grid-cols-2 gap-3"></div>
             </div>
         </main>
 
@@ -160,8 +126,6 @@
     <!-- ========================================== -->
     <!-- MODAIS DO SISTEMA                          -->
     <!-- ========================================== -->
-
-    <!-- Modal de Agendamento -->
     <div id="booking-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
             <div class="bg-[#2b7de0] p-5 flex justify-between items-center text-white">
@@ -177,19 +141,19 @@
                 <form id="booking-form" class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700">Nome da Agência/Empresa</label>
-                        <input type="text" id="empresa" required class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#2b7de0] focus:border-transparent outline-none transition-all">
+                        <input type="text" id="empresa" required class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#2b7de0] outline-none transition-all">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700">Seu Nome</label>
-                        <input type="text" id="nome" required class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#2b7de0] focus:border-transparent outline-none transition-all">
+                        <input type="text" id="nome" required class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#2b7de0] outline-none transition-all">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700">Assunto Principal</label>
-                        <input type="text" id="assunto" required placeholder="Ex: Novos produtos, Treinamento..." class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#2b7de0] focus:border-transparent outline-none transition-all">
+                        <input type="text" id="assunto" required placeholder="Ex: Novos produtos, Treinamento..." class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#2b7de0] outline-none transition-all">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700">E-mail de Contato</label>
-                        <input type="email" id="email" required class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#2b7de0] focus:border-transparent outline-none transition-all">
+                        <input type="email" id="email" required class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#2b7de0] outline-none transition-all">
                     </div>
                     <button type="submit" id="btn-submit" class="w-full bg-[#f57c24] text-white font-bold py-4 rounded-xl hover:bg-[#d9671b] shadow-lg shadow-[#f57c24]/30 transition-all mt-6">
                         Confirmar Reserva
@@ -199,7 +163,6 @@
         </div>
     </div>
 
-    <!-- Modal de Senha para Área Reservada -->
     <div id="password-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div class="p-6 text-center relative">
@@ -209,18 +172,15 @@
                 </div>
                 <h3 class="font-bold text-xl text-gray-800 mb-2">Horário Reservado</h3>
                 <p class="text-sm text-gray-500 mb-6">Esta área é restrita. Insira a senha para ver quem agendou.</p>
-                
-                <input type="password" id="admin-password" placeholder="Código de acesso" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-center mb-6 focus:bg-white focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none tracking-widest font-mono">
-                
+                <input type="password" id="admin-password" placeholder="Código de acesso" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-center mb-6 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none tracking-widest font-mono">
                 <div class="flex space-x-3">
-                    <button onclick="closeModal('password-modal')" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
-                    <button onclick="checkPassword()" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all">Acessar</button>
+                    <button onclick="closeModal('password-modal')" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200">Cancelar</button>
+                    <button onclick="checkPassword()" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600">Acessar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Detalhes da Reserva (Admin) -->
     <div id="details-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div class="bg-gray-900 p-5 flex justify-between items-center text-white">
@@ -228,15 +188,12 @@
                     <i class="fas fa-shield-check text-[#f57c24]"></i>
                     <h3 class="font-bold text-lg">Detalhes Confidenciais</h3>
                 </div>
-                <button onclick="closeModal('details-modal')" class="text-white hover:text-[#f57c24] transition-colors"><i class="fas fa-times text-xl"></i></button>
+                <button onclick="closeModal('details-modal')" class="text-white hover:text-[#f57c24]"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <div class="p-6 space-y-4" id="reservation-details">
-                <!-- Preenchido via JS -->
-            </div>
+            <div class="p-6 space-y-4" id="reservation-details"></div>
         </div>
     </div>
 
-    <!-- Modal de Mensagem (Substitui o Alert) -->
     <div id="message-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
             <div id="msg-icon" class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"></div>
@@ -251,24 +208,16 @@
         // CONFIGURAÇÕES DO SISTEMA
         // ==========================================
         const ADMIN_PASSWORD = "1234$#@";
-        // IMPORTANTE: Para usar o Google Sheets no seu GitHub, cole a URL gerada pelo Google Apps Script aqui.
-        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxy3bl4e8JvM3KZud_HA-Gbt3T0pA5qp0LexPx44SQSahTj29IjSOpNQOuwar6vjlqi/exec"; 
-
-        // Horários atualizados com base em 4 visitas diárias e tempos de locomoção
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzVsVrV7lR7MGsKpBDim56eEkodD-o1MHR89AZHiXinbffzugdrqf9OjC1h453zLm0a/exec"; 
         const AVAILABLE_HOURS = ["09:30", "11:00", "14:30", "16:00"];
         
         let selectedDate = null;
         let selectedTime = null;
         let bookings = [];
         let currentViewingBooking = null;
-        
-        // Controlo do calendário
         let currentMonth = new Date().getMonth();
         let currentYear = new Date().getFullYear();
 
-        // ==========================================
-        // TRANSIÇÃO DE TELA (LANDING PAGE -> APP)
-        // ==========================================
         window.startApp = function() {
             const landing = document.getElementById('landing-page');
             const mainApp = document.getElementById('main-app');
@@ -276,21 +225,15 @@
             
             landing.style.opacity = '0';
             landing.style.transform = 'scale(1.05)';
-            
             setTimeout(() => {
                 landing.classList.add('hidden');
                 mainApp.classList.remove('hidden');
-                body.classList.remove('overflow-hidden'); // Permite rolar a página principal
-                
-                // Força o navegador a reconhecer a remoção do hidden antes de mudar a opacidade
+                body.classList.remove('overflow-hidden');
                 void mainApp.offsetWidth; 
                 mainApp.classList.remove('opacity-0');
             }, 600);
         };
 
-        // ==========================================
-        // INICIALIZAÇÃO E FIREBASE
-        // ==========================================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -299,49 +242,15 @@
         const isPreviewEnvironment = typeof __firebase_config !== 'undefined';
 
         async function initApp() {
-            // Definir data selecionada inicialmente (ignora fins de semana)
             let startD = new Date();
-            if (startD.getDay() === 0) startD.setDate(startD.getDate() + 1); // Domingo -> Segunda
-            if (startD.getDay() === 6) startD.setDate(startD.getDate() + 2); // Sábado -> Segunda
+            if (startD.getDay() === 0) startD.setDate(startD.getDate() + 1); 
+            if (startD.getDay() === 6) startD.setDate(startD.getDate() + 2); 
             selectedDate = getLocalDateString(startD);
             
             renderCalendar();
-            
-            if (isPreviewEnvironment && GOOGLE_APPS_SCRIPT_URL === "") {
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                db = getFirestore(app);
-                appId = typeof __app_id !== 'undefined' ? __app_id : 'agendamento-tbo';
-
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (error) {
-                    console.error("Erro na autenticação do Firebase:", error);
-                }
-                
-                onAuthStateChanged(auth, (user) => {
-                    currentUser = user;
-                    if (user) {
-                        fetchBookingsFirebase();
-                    }
-                });
-            } else if (GOOGLE_APPS_SCRIPT_URL !== "") {
-                fetchBookingsGoogleSheets();
-            } else {
-                renderTimeSlots();
-            }
+            fetchBookingsGoogleSheets();
         }
 
-        // ==========================================
-        // FUNÇÕES DE INTERFACE (UI)
-        // ==========================================
-        
-        // Utilitário para formatar a data local em YYYY-MM-DD
         function getLocalDateString(dateObj) {
             const y = dateObj.getFullYear();
             const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -371,21 +280,16 @@
 
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-            
             const today = new Date();
             today.setHours(0,0,0,0);
 
-            // Preencher os espaços vazios do início do mês
             for (let i = 0; i < firstDay; i++) {
-                const emptyCell = document.createElement('div');
-                container.appendChild(emptyCell);
+                container.appendChild(document.createElement('div'));
             }
 
-            // Preencher os dias do mês
             for (let day = 1; day <= daysInMonth; day++) {
                 const cellDate = new Date(currentYear, currentMonth, day);
                 const localDateStr = getLocalDateString(cellDate);
-
                 const isPast = cellDate < today;
                 const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
                 const isSelected = localDateStr === selectedDate;
@@ -402,65 +306,47 @@
                 }
 
                 if (isSelected) {
-                    // Sobrescreve classes se estiver selecionado
                     cell.className = "flex items-center justify-center h-10 w-full rounded-xl text-sm font-bold mx-auto transition-all bg-[#2b7de0] text-white shadow-md shadow-[#2b7de0]/30 cursor-pointer select-none";
                 }
-
                 container.appendChild(cell);
             }
         }
 
         window.selectDate = function(dateStr) {
             selectedDate = dateStr;
-            renderCalendar(); // Re-renderiza para atualizar as cores e a seleção
+            renderCalendar(); 
             renderTimeSlots();
         };
 
         function renderTimeSlots() {
             const container = document.getElementById('time-slots');
             container.innerHTML = '';
-
             const bookingsForDay = bookings.filter(b => b.date === selectedDate);
 
             AVAILABLE_HOURS.forEach(time => {
                 const booking = bookingsForDay.find(b => b.time === time);
-                
                 const btn = document.createElement('button');
                 btn.className = "w-full py-4 rounded-xl font-bold text-sm transition-all shadow-sm flex flex-col items-center justify-center gap-1 border-2";
                 
                 if (booking) {
                     btn.classList.add('bg-gray-50', 'text-red-500', 'border-red-100', 'hover:bg-red-50', 'hover:border-red-200');
-                    btn.innerHTML = `
-                        <i class="fas fa-lock mb-1 text-red-400"></i>
-                        <span>${time}</span>
-                        <span class="text-[0.65rem] tracking-widest text-red-400 uppercase mt-1">Reservado</span>
-                    `;
+                    btn.innerHTML = `<i class="fas fa-lock mb-1 text-red-400"></i><span>${time}</span><span class="text-[0.65rem] tracking-widest text-red-400 uppercase mt-1">Reservado</span>`;
                     btn.onclick = () => showPasswordPrompt(booking);
                 } else {
                     btn.classList.add('bg-white', 'text-[#2b7de0]', 'border-blue-50', 'hover:border-[#2b7de0]/30', 'hover:bg-[#2b7de0]/5', 'hover:shadow-md');
-                    btn.innerHTML = `
-                        <i class="far fa-clock mb-1 opacity-70"></i>
-                        <span class="text-lg">${time}</span>
-                        <span class="text-[0.65rem] tracking-widest text-[#f57c24] uppercase mt-1">Livre</span>
-                    `;
+                    btn.innerHTML = `<i class="far fa-clock mb-1 opacity-70"></i><span class="text-lg">${time}</span><span class="text-[0.65rem] tracking-widest text-[#f57c24] uppercase mt-1">Livre</span>`;
                     btn.onclick = () => openBookingModal(time);
                 }
                 container.appendChild(btn);
             });
         }
 
-        // ==========================================
-        // LÓGICA DE AGENDAMENTO
-        // ==========================================
         window.openBookingModal = function(time) {
             selectedTime = time;
             const [y, m, d] = selectedDate.split('-');
-            const displayDate = `${d}/${m}/${y}`;
-            
             document.getElementById('display-time').innerText = time;
-            document.getElementById('display-date').innerText = displayDate;
+            document.getElementById('display-date').innerText = `${d}/${m}/${y}`;
             document.getElementById('booking-form').reset();
-            
             document.getElementById('booking-modal').classList.remove('hidden');
         };
 
@@ -480,30 +366,18 @@
             };
 
             try {
-                if (GOOGLE_APPS_SCRIPT_URL !== "") {
-                    await saveToGoogleSheets(newBooking);
-                } else if (isPreviewEnvironment && currentUser) {
-                    const agendamentosRef = collection(db, 'artifacts', appId, 'public', 'data', 'agendamentos');
-                    await addDoc(agendamentosRef, { ...newBooking, createdAt: serverTimestamp() });
-                } else {
-                    bookings.push(newBooking);
-                    renderTimeSlots();
-                }
-                
+                await saveToGoogleSheets(newBooking);
                 closeModal('booking-modal');
                 showMessage("Agendamento Confirmado!", "Sua visita com o Eduardo foi agendada com sucesso. Ele receberá um e-mail com os detalhes.", "success");
             } catch (error) {
                 console.warn("Erro ao agendar:", error);
-                showMessage("Aviso de Conexão", "Houve uma falha de permissão ao tentar salvar. Certifique-se de que a planilha está configurada para acesso por 'Qualquer pessoa'.", "error");
+                showMessage("Erro de Conexão", "Não conseguimos salvar seu horário no momento. Verifique a internet e tente novamente.", "error");
             } finally {
                 btn.innerHTML = 'Confirmar Reserva';
                 btn.disabled = false;
             }
         });
 
-        // ==========================================
-        // ÁREA RESTRITA (ADMIN)
-        // ==========================================
         window.showPasswordPrompt = function(booking) {
             currentViewingBooking = booking;
             document.getElementById('admin-password').value = '';
@@ -523,21 +397,14 @@
         function showAdminDetails() {
             const b = currentViewingBooking;
             const [y, m, d] = b.date.split('-');
-            
             const html = `
                 <div class="bg-gray-800 p-4 rounded-xl mb-2">
                     <p class="text-[0.65rem] text-gray-400 uppercase tracking-widest mb-1">Data e Hora</p>
                     <p class="font-bold text-white text-lg"><i class="far fa-calendar-check text-[#f57c24] mr-2"></i>${d}/${m}/${y} às ${b.time}</p>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-gray-800 p-4 rounded-xl">
-                        <p class="text-[0.65rem] text-gray-400 uppercase tracking-widest mb-1">Empresa</p>
-                        <p class="font-bold text-white">${b.empresa}</p>
-                    </div>
-                    <div class="bg-gray-800 p-4 rounded-xl">
-                        <p class="text-[0.65rem] text-gray-400 uppercase tracking-widest mb-1">Contato</p>
-                        <p class="font-bold text-white">${b.nome}</p>
-                    </div>
+                    <div class="bg-gray-800 p-4 rounded-xl"><p class="text-[0.65rem] text-gray-400 uppercase tracking-widest mb-1">Empresa</p><p class="font-bold text-white">${b.empresa}</p></div>
+                    <div class="bg-gray-800 p-4 rounded-xl"><p class="text-[0.65rem] text-gray-400 uppercase tracking-widest mb-1">Contato</p><p class="font-bold text-white">${b.nome}</p></div>
                 </div>
                 <div class="bg-gray-800 p-4 rounded-xl">
                     <p class="text-[0.65rem] text-gray-400 uppercase tracking-widest mb-1">E-mail</p>
@@ -548,46 +415,20 @@
                     <p class="font-medium text-gray-200">${b.assunto}</p>
                 </div>
             `;
-            
             document.getElementById('reservation-details').innerHTML = html;
             document.getElementById('details-modal').classList.remove('hidden');
         }
 
-        // ==========================================
-        // FETCH & SAVE DATA
-        // ==========================================
-        function fetchBookingsFirebase() {
-            if (!currentUser) return;
-            const agendamentosRef = collection(db, 'artifacts', appId, 'public', 'data', 'agendamentos');
-            onSnapshot(agendamentosRef, (snapshot) => {
-                bookings = [];
-                snapshot.forEach((doc) => bookings.push({ id: doc.id, ...doc.data() }));
-                renderTimeSlots();
-            }, (error) => console.error(error));
-        }
-
         async function fetchBookingsGoogleSheets() {
             try {
-                // Removemos o redirect: 'follow' explícito, deixamos o comportamento padrão do navegador
                 const response = await fetch(GOOGLE_APPS_SCRIPT_URL + "?action=get");
-                
-                // Obtém o texto bruto para validar se a Google não devolveu uma página HTML de Erro/Login
                 const textData = await response.text();
-                
-                if (textData.trim().startsWith('<')) {
-                    throw new Error("A Google bloqueou o acesso e devolveu uma página HTML.");
-                }
-
-                const data = JSON.parse(textData);
-                bookings = data || [];
+                if (textData.trim().startsWith('<')) throw new Error("Acesso bloqueado pela Google.");
+                bookings = JSON.parse(textData) || [];
                 renderTimeSlots();
             } catch (error) {
-                console.warn("Erro de ligação (CORS ou Permissão):", error.message);
-                showMessage(
-                    "Bloqueio de Segurança", 
-                    "O acesso à folha de cálculo foi recusado. Para corrigir: Vá à sua Planilha > Extensões > Apps Script > Implantar > Gerenciar implantações. Clique no lápis (Editar), mude a 'Versão' para 'Nova versão', confirme que 'Quem tem acesso' é 'Qualquer pessoa' e clique em Implantar.", 
-                    "error"
-                );
+                console.warn("Erro ao buscar dados:", error.message);
+                renderTimeSlots(); 
             }
         }
 
@@ -601,52 +442,29 @@
             formData.append('assunto', bookingData.assunto);
             formData.append('email', bookingData.email);
 
-            try {
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-                });
+            const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: formData
+            });
 
-                const textData = await response.text();
-                
-                if (textData.trim().startsWith('<')) {
-                    throw new Error("Bloqueio de permissão ao tentar guardar.");
-                }
-
-                const result = JSON.parse(textData);
-                if(result.status === 'success') {
-                    bookings.push(bookingData);
-                    renderTimeSlots();
-                } else {
-                    throw new Error("Falha ao processar no script da Google.");
-                }
-            } catch (error) {
-                console.warn("Erro ao guardar dados:", error.message);
-                showMessage(
-                    "Erro ao Guardar", 
-                    "Não foi possível guardar a marcação. Verifique as permissões de partilha ('Qualquer pessoa') nas implantações do Apps Script.", 
-                    "error"
-                );
-                throw error; // Propaga o erro para o form
+            const textData = await response.text();
+            if (textData.trim().startsWith('<')) throw new Error("Bloqueio de permissão");
+            
+            const result = JSON.parse(textData);
+            if(result.status === 'success') {
+                bookings.push(bookingData);
+                renderTimeSlots();
+            } else {
+                throw new Error("Falha no Google Apps Script");
             }
         }
 
-        // ==========================================
-        // UTILITÁRIOS
-        // ==========================================
-        window.closeModal = function(modalId) {
-            document.getElementById(modalId).classList.add('hidden');
-        };
+        window.closeModal = function(modalId) { document.getElementById(modalId).classList.add('hidden'); };
 
         function showMessage(title, text, type) {
-            const titleEl = document.getElementById('msg-title');
-            const textEl = document.getElementById('msg-text');
+            document.getElementById('msg-title').innerText = title;
+            document.getElementById('msg-text').innerText = text;
             const iconEl = document.getElementById('msg-icon');
-            
-            titleEl.innerText = title;
-            textEl.innerText = text;
-            
             if (type === 'success') {
                 iconEl.className = 'w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-5 bg-[#2b7de0]/10 text-[#2b7de0] shadow-inner';
                 iconEl.innerHTML = '<i class="fas fa-check-circle text-6xl"></i>';
@@ -654,7 +472,6 @@
                 iconEl.className = 'w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-5 bg-red-100 text-red-500 shadow-inner';
                 iconEl.innerHTML = '<i class="fas fa-exclamation-circle text-6xl"></i>';
             }
-            
             document.getElementById('message-modal').classList.remove('hidden');
         }
 
