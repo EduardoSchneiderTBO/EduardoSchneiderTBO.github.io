@@ -370,7 +370,8 @@
                 }
             } catch (error) {
                 console.warn("Erro ao agendar:", error);
-                showMessage("Erro de Conexão", "Não conseguimos salvar seu horário. Verifique as permissões de acesso da planilha.", "error");
+                // Ajuste na mensagem de erro para ser mais didática
+                showMessage("Aviso de Permissão", "O Script da Google negou o acesso. Certifique-se de que a Implantação está como 'Qualquer pessoa'.", "error");
             } finally {
                 btn.innerHTML = 'Confirmar Reserva';
                 btn.disabled = false;
@@ -422,20 +423,25 @@
 
         async function fetchBookingsGoogleSheets() {
             try {
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + "?action=get");
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + "?action=get", {
+                    method: 'GET',
+                    mode: 'cors'
+                });
                 const textData = await response.text();
+                // Se o Google devolver HTML (página de login), é porque as permissões estão erradas
                 if (textData.trim().startsWith('<')) {
-                    throw new Error("Permissão Negada: O link está bloqueado pela Google.");
+                    throw new Error("Permissão Negada");
                 }
                 bookings = JSON.parse(textData) || [];
                 renderTimeSlots();
             } catch (error) {
                 console.warn("Erro ao buscar dados:", error.message);
-                showMessage("Aviso de Permissão", "O site não consegue ler a planilha. Verifique se configurou 'Quem tem acesso: Qualquer pessoa' na implantação do Google Apps Script.", "error");
+                showMessage("Aviso de Permissão", "O site não consegue ler a planilha. Verifique se a Implantação no Google está como 'Qualquer pessoa'.", "error");
             }
         }
 
         async function saveToGoogleSheets(bookingData) {
+            // Usamos FormData para garantir que o Google Apps Script receba os dados corretamente via POST
             const formData = new URLSearchParams();
             formData.append('date', bookingData.date);
             formData.append('time', bookingData.time);
@@ -447,11 +453,16 @@
             const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                 method: 'POST',
                 body: formData,
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
             });
 
             const textData = await response.text();
-            if (textData.trim().startsWith('<')) throw new Error("Bloqueio de permissão");
+            // Se o Google redirecionar para uma página de erro HTML, falhamos aqui
+            if (textData.trim().startsWith('<')) {
+                throw new Error("Resposta inválida do servidor");
+            }
             return JSON.parse(textData);
         }
 
