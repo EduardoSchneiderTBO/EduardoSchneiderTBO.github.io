@@ -208,7 +208,7 @@
         // CONFIGURAÇÕES DO SISTEMA
         // ==========================================
         const ADMIN_PASSWORD = "1234$#@";
-        // URL ATUALIZADA PARA A SUA ÚLTIMA IMPLANTAÇÃO (...pD7p/exec)
+        // LINK ATUALIZADO
         const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7Dme1eQbDXe--GvMP_mTKRcc_8qRg4BPL_m7sekJxzgEAp5EmqqSthEfMsijNgD7p/exec"; 
         const AVAILABLE_HOURS = ["09:30", "11:00", "14:30", "16:00"];
         
@@ -235,13 +235,6 @@
             }, 600);
         };
 
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        let db, appId, currentUser;
-        const isPreviewEnvironment = typeof __firebase_config !== 'undefined';
-
         async function initApp() {
             let startD = new Date();
             if (startD.getDay() === 0) startD.setDate(startD.getDate() + 1); 
@@ -249,7 +242,7 @@
             selectedDate = getLocalDateString(startD);
             
             renderCalendar();
-            fetchBookingsGoogleSheets();
+            await fetchBookingsGoogleSheets();
         }
 
         function getLocalDateString(dateObj) {
@@ -367,12 +360,17 @@
             };
 
             try {
-                await saveToGoogleSheets(newBooking);
-                closeModal('booking-modal');
-                showMessage("Agendamento Confirmado!", "Sua visita com o Eduardo foi agendada com sucesso. Ele receberá um e-mail com os detalhes.", "success");
+                const result = await saveToGoogleSheets(newBooking);
+                if(result.status === 'success') {
+                    closeModal('booking-modal');
+                    showMessage("Agendamento Confirmado!", "Sua visita com o Eduardo foi agendada com sucesso.", "success");
+                    await fetchBookingsGoogleSheets();
+                } else {
+                    throw new Error(result.message || "Erro desconhecido");
+                }
             } catch (error) {
                 console.warn("Erro ao agendar:", error);
-                showMessage("Erro de Conexão", "Não conseguimos salvar seu horário no momento. Verifique a internet e tente novamente.", "error");
+                showMessage("Erro de Conexão", "Não conseguimos salvar seu horário. Verifique as permissões de acesso da planilha.", "error");
             } finally {
                 btn.innerHTML = 'Confirmar Reserva';
                 btn.disabled = false;
@@ -391,7 +389,7 @@
                 closeModal('password-modal');
                 showAdminDetails();
             } else {
-                showMessage("Acesso Negado", "Senha incorreta. Esta área é exclusiva para o Executivo de Contas.", "error");
+                showMessage("Acesso Negado", "Senha incorreta.", "error");
             }
         };
 
@@ -426,18 +424,19 @@
             try {
                 const response = await fetch(GOOGLE_APPS_SCRIPT_URL + "?action=get");
                 const textData = await response.text();
-                if (textData.trim().startsWith('<')) throw new Error("Acesso bloqueado pela Google.");
+                if (textData.trim().startsWith('<')) {
+                    throw new Error("Permissão Negada: O link está bloqueado pela Google.");
+                }
                 bookings = JSON.parse(textData) || [];
                 renderTimeSlots();
             } catch (error) {
                 console.warn("Erro ao buscar dados:", error.message);
-                renderTimeSlots(); 
+                showMessage("Aviso de Permissão", "O site não consegue ler a planilha. Verifique se configurou 'Quem tem acesso: Qualquer pessoa' na implantação do Google Apps Script.", "error");
             }
         }
 
         async function saveToGoogleSheets(bookingData) {
             const formData = new URLSearchParams();
-            formData.append('action', 'add');
             formData.append('date', bookingData.date);
             formData.append('time', bookingData.time);
             formData.append('empresa', bookingData.empresa);
@@ -447,19 +446,13 @@
 
             const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             });
 
             const textData = await response.text();
             if (textData.trim().startsWith('<')) throw new Error("Bloqueio de permissão");
-            
-            const result = JSON.parse(textData);
-            if(result.status === 'success') {
-                bookings.push(bookingData);
-                renderTimeSlots();
-            } else {
-                throw new Error("Falha no Google Apps Script");
-            }
+            return JSON.parse(textData);
         }
 
         function showMessage(title, text, type) {
@@ -467,11 +460,11 @@
             document.getElementById('msg-text').innerText = text;
             const iconEl = document.getElementById('msg-icon');
             if (type === 'success') {
-                iconEl.className = 'w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-5 bg-[#2b7de0]/10 text-[#2b7de0] shadow-inner';
-                iconEl.innerHTML = '<i class="fas fa-check-circle text-6xl"></i>';
+                iconEl.className = 'w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 bg-green-100 text-green-500';
+                iconEl.innerHTML = '<i class="fas fa-check-circle text-5xl"></i>';
             } else {
-                iconEl.className = 'w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-5 bg-red-100 text-red-500 shadow-inner';
-                iconEl.innerHTML = '<i class="fas fa-exclamation-circle text-6xl"></i>';
+                iconEl.className = 'w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 bg-red-100 text-red-500';
+                iconEl.innerHTML = '<i class="fas fa-exclamation-circle text-5xl"></i>';
             }
             document.getElementById('message-modal').classList.remove('hidden');
         }
