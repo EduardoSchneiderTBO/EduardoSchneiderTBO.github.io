@@ -7,15 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase SDKs (Apenas para o preview local caso falhe a planilha) -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
-
     <style>
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .page-transition { transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out; }
+        /* Impede zoom indesejado em iPhones ao focar em inputs */
+        input { font-size: 16px !important; }
     </style>
 </head>
 <body class="bg-gray-50 font-sans antialiased text-gray-800 overflow-hidden" id="body-container">
@@ -347,6 +344,8 @@
         document.getElementById('booking-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-submit');
+            const originalText = btn.innerHTML;
+            
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
             btn.disabled = true;
 
@@ -360,20 +359,21 @@
             };
 
             try {
-                const result = await saveToGoogleSheets(newBooking);
-                if(result.status === 'success') {
+                const response = await saveToGoogleSheets(newBooking);
+                
+                if(response && response.status === 'success') {
                     closeModal('booking-modal');
                     showMessage("Agendamento Confirmado!", "Sua visita com o Eduardo foi agendada com sucesso.", "success");
-                    await fetchBookingsGoogleSheets();
+                    // Aguarda um segundo e recarrega os dados
+                    setTimeout(() => fetchBookingsGoogleSheets(), 1000);
                 } else {
-                    throw new Error(result.message || "Erro desconhecido");
+                    throw new Error(response.message || "Erro no servidor da Google");
                 }
             } catch (error) {
-                console.warn("Erro ao agendar:", error);
-                // Ajuste na mensagem de erro para ser mais didática
-                showMessage("Aviso de Permissão", "O Script da Google negou o acesso. Certifique-se de que a Implantação está como 'Qualquer pessoa'.", "error");
+                console.error("Erro técnico:", error);
+                showMessage("Falha na Ligação", "O Google não aceitou o pedido. Verifique se a Implantação no Apps Script está como 'Qualquer pessoa'.", "error");
             } finally {
-                btn.innerHTML = 'Confirmar Reserva';
+                btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         });
@@ -423,25 +423,23 @@
 
         async function fetchBookingsGoogleSheets() {
             try {
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + "?action=get", {
-                    method: 'GET',
-                    mode: 'cors'
-                });
+                // Adicionamos um timestamp para evitar cache do navegador
+                const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=get&t=${Date.now()}`);
                 const textData = await response.text();
-                // Se o Google devolver HTML (página de login), é porque as permissões estão erradas
+                
                 if (textData.trim().startsWith('<')) {
-                    throw new Error("Permissão Negada");
+                    throw new Error("Permissão Negada (Google retornou HTML)");
                 }
+                
                 bookings = JSON.parse(textData) || [];
                 renderTimeSlots();
             } catch (error) {
                 console.warn("Erro ao buscar dados:", error.message);
-                showMessage("Aviso de Permissão", "O site não consegue ler a planilha. Verifique se a Implantação no Google está como 'Qualquer pessoa'.", "error");
+                // Não mostramos erro logo no início para não assustar o utilizador se for apenas lentidão
             }
         }
 
         async function saveToGoogleSheets(bookingData) {
-            // Usamos FormData para garantir que o Google Apps Script receba os dados corretamente via POST
             const formData = new URLSearchParams();
             formData.append('date', bookingData.date);
             formData.append('time', bookingData.time);
@@ -450,19 +448,20 @@
             formData.append('assunto', bookingData.assunto);
             formData.append('email', bookingData.email);
 
+            // Fetch simples sem headers complexos para evitar bloqueio de CORS na Google
             const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
+                mode: 'cors'
             });
 
             const textData = await response.text();
-            // Se o Google redirecionar para uma página de erro HTML, falhamos aqui
+            
+            // Verificação de segurança: Se começar com <, a Google enviou uma página de erro HTML
             if (textData.trim().startsWith('<')) {
-                throw new Error("Resposta inválida do servidor");
+                throw new Error("Resposta de erro da Google");
             }
+            
             return JSON.parse(textData);
         }
 
