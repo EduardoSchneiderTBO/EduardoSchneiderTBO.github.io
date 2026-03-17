@@ -208,7 +208,8 @@
         // CONFIGURAÇÕES DO SISTEMA
         // ==========================================
         const ADMIN_PASSWORD = "1234$#@";
-        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzVsVrV7lR7MGsKpBDim56eEkodD-o1MHR89AZHiXinbffzugdrqf9OjC1h453zLm0a/exec"; 
+        // URL ATUALIZADA PARA A SUA ÚLTIMA IMPLANTAÇÃO (...pD7p/exec)
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7Dme1eQbDXe--GvMP_mTKRcc_8qRg4BPL_m7sekJxzgEAp5EmqqSthEfMsijNgD7p/exec"; 
         const AVAILABLE_HOURS = ["09:30", "11:00", "14:30", "16:00"];
         
         let selectedDate = null;
@@ -419,6 +420,8 @@
             document.getElementById('details-modal').classList.remove('hidden');
         }
 
+        window.closeModal = function(modalId) { document.getElementById(modalId).classList.add('hidden'); };
+
         async function fetchBookingsGoogleSheets() {
             try {
                 const response = await fetch(GOOGLE_APPS_SCRIPT_URL + "?action=get");
@@ -458,8 +461,6 @@
                 throw new Error("Falha no Google Apps Script");
             }
         }
-
-        window.closeModal = function(modalId) { document.getElementById(modalId).classList.add('hidden'); };
 
         function showMessage(title, text, type) {
             document.getElementById('msg-title').innerText = title;
